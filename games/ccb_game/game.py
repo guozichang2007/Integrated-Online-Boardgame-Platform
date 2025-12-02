@@ -180,6 +180,16 @@ class CCBGame(BaseGame):
         
         return {'ok': False, 'msg': '未知事件'}
     
+    def handle_return(self, account):
+        return {
+                'ok': True,
+                'msg': '重新加入游戏成功',
+                'players': self.players,
+                'turn': self.turn,
+                'board': self.board,
+                'broadcast': True
+            }
+
     def bot_place_piece(self):
         
     # 建立所有合法方案

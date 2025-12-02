@@ -60,12 +60,25 @@ class BaseGame:
         """
         pass
     
-    def get_state(self):
+    def get_state(self,account=0):
         """
         获取游戏状态
         
         Returns:
             dict: 游戏状态数据
         """
+        pass
+
+    def handle_return(self, account):
+        """
+        处理玩家返回游戏
+        
+        Args:
+            account: 玩家账号
+        
+        Returns:
+            dict: 处理结果
+        """
+        self.get_state(account)
         pass
 

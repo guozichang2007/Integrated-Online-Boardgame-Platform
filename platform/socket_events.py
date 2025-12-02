@@ -82,6 +82,13 @@ def init_socket_events(socketio, room_manager):
                 room_id=get_user(account).get('room')
                 if(room_id):
                     print(f"用户 {account} 重新连接后加入房间: {room_id}")
+                room=room_manager.get_room(room_id)
+                start_or_not=room.get_info().get('game_started') if room else False
+                if(start_or_not):
+                    print(f"用户 {account} 重新连接后游戏已开始，重新加入游戏")
+                    result =room_manager.handle_reconnect(room_id, account)
+                    emit('reconnect_response', {account: account, result: result})
+                    return
                 return
         
         # Token无效或不存在，发送错误响应
