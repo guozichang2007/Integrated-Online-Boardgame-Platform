@@ -5,9 +5,10 @@
 
 // 初始化 Socket.IO 客户端，携带token
 var token = localStorage.getItem('session_token');
-const socket = io();
+const socket = io({auth: {
+        token: token  }});
 console.log('main.js loaded, socket.io connected with token');
-
+console.log('Token:', token);
 // 平台 & 房间相关全局状态
 let currentUser = null;   // 当前用户信息 { account, ID, room, password }
 let currentRoom = null;   // 当前所在房间号
@@ -24,6 +25,11 @@ let playerID = null;      // 当前玩家ID（显示在游戏中，暂未使用�
 // DOM 事件绑定（登录 / 房间 / 游戏控制）
 // ================================
 
+socket.on('connect', () => {
+    console.log('Socket.IO 连接成功！');
+    socket.emit('handle_token_reconnect', token);
+});
+
 $(document).ready(() => {
     // 跳过回合按钮（游戏操作）
   $('#btnSkip').click(() => {
@@ -39,6 +45,22 @@ $(document).ready(() => {
 // ================================
 // Socket 事件：登录 / 房间 / 平台逻辑
 // ================================
+
+// 重连响应
+socket.on('reconnect_response', d => {
+  if (d.ok && d.game_state) {
+    // 更新游戏状态
+    if (d.game_state.players) {
+      players = d.game_state.players;
+    }
+    if (d.game_state.board) {
+      renderBoard(d.game_state.board);
+    }
+    if (d.game_state.turn) {
+      renderTurn(d.game_state.turn, d.game_state.players || players);
+    }
+  }
+});
 
 
 
