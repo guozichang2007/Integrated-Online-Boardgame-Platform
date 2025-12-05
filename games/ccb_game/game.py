@@ -189,6 +189,19 @@ class CCBGame(BaseGame):
                 'board': self.board,
                 'broadcast': True
             }
+    
+    def get_state(self):
+        """
+        获取当前游戏状态，用于重连时刷新前端
+        
+        Returns:
+            dict: 包含游戏完整状态的字典
+        """
+        return {
+            'players': self.players,
+            'turn': self.turn,
+            'board': self.board
+        }
 
     def bot_place_piece(self):
         
@@ -1062,6 +1075,5 @@ def register_game():
         'min_players': 1,
         'max_players': 4,
         'class': CCBGame,
-        'url': '/'
+        'url': '/ccb'
     }
-            
