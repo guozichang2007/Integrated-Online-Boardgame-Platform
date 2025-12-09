@@ -15,7 +15,7 @@
         "account": "111",
         "ID": "Tester1",
         "password": "pbkdf2:sha256:1000000$d5Ua0nNKcHctXxWT$2fde853c53d76febd9f61d14759056a3f2ec53ced25dfe9b27e37feb6f9fec26",
-        "room": "11"
+        "room": "1"
     },
     "11": {
         "account": "11",

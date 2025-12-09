@@ -81,13 +81,13 @@ class RouletteGame(BaseGame):
             
             if card_type == 2:  # 爆炸
                 self.game_over = True
-                msg = f'💥 爆炸！游戏结束！'
+                msg = f'💥 爆炸！'
             else:  # 安全
-                msg = f'✓ 安全！继续游戏'
+                msg = f'✓ 安全！'
                 # 检查是否全部安全卡都翻开了
                 if all(self.revealed[i] or self.cards[i] == 2 for i in range(6)):
                     self.game_over = True
-                    msg = f'🎉 恭喜！你翻开了所有安全卡！'
+                    msg = f'🎉 恭喜！终于知道炸弹在哪里了！'
             
             return {
                 'ok': True,
@@ -144,7 +144,7 @@ def register_game():
         'name': 'Roulette',
         'description': '轮盘赌游戏 - 6张卡，1张爆炸，5张安全',
         'min_players': 1,
-        'max_players': 4,
+        'max_players': 1,
         'class': RouletteGame,
         'url': '/roulette'
     }
