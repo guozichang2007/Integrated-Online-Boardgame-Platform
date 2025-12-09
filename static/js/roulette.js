@@ -1,56 +1,68 @@
-// Roulette游戏前端逻辑
-// 负责与后端Socket.IO通信，处理用户输入和显示输出
-
-// 初始化Socket.IO连接
+// Roulette轮盘赌游戏前端逻辑
 const socket = io();
 var token = localStorage.getItem('session_token');
 
 // 获取DOM元素
-const inputField = document.getElementById('input');
-const sendBtn = document.getElementById('sendBtn');
-const outputElement = document.getElementById('output');
+const cardsContainer = document.getElementById('cards-container');
+const resetBtn = document.getElementById('resetBtn');
+const messageElement = document.getElementById('message');
 const statusElement = document.getElementById('status');
+
+// 游戏状态
+let gameState = {
+    cards: [0, 0, 0, 0, 0, 0],  // 0=未翻开, 1=安全, 2=爆炸
+    gameOver: false
+};
 
 // 连接状态管理
 socket.on('connect', () => {
     console.log('Socket连接成功');
     statusElement.textContent = '连接状态: 已连接';
     statusElement.className = 'status connected';
-    outputElement.textContent = '已连接到服务器，可以开始测试...';
+    messageElement.textContent = '点击卡牌开始游戏！';
 });
 
 socket.on('disconnect', () => {
     console.log('Socket连接断开');
     statusElement.textContent = '连接状态: 已断开';
     statusElement.className = 'status disconnected';
-    outputElement.textContent = '连接已断开，请刷新页面重新连接...';
+    messageElement.textContent = '连接已断开，请刷新页面重新连接...';
 });
 
-// 发送消息函数
-function sendMessage() {
-    const inputValue = inputField.value.trim();
-    
-    if (!inputValue) {
-        outputElement.textContent = '请输入内容后再发送！';
+// 翻牌函数
+function flipCard(index) {
+    if (gameState.gameOver) {
+        messageElement.textContent = '游戏已结束，请点击重置按钮重新开始！';
         return;
     }
     
-    // 显示发送中状态
-    outputElement.textContent = '发送中...';
+    if (gameState.cards[index] !== 0) {
+        messageElement.textContent = '该卡牌已经翻开！';
+        return;
+    }
     
-    // 构造游戏事件数据
+    // 发送翻牌事件到后端
     const eventData = {
         token: token,
-        event_name: 'test_input',
+        event_name: 'flip_card',
         event_data: {
-            input: inputValue,
-            timestamp: new Date().toISOString()
+            index: index
         }
     };
     
-    console.log('发送游戏事件:', eventData);
+    console.log('发送翻牌事件:', eventData);
+    socket.emit('game_event', eventData);
+}
+
+// 重置游戏
+function resetGame() {
+    const eventData = {
+        token: token,
+        event_name: 'reset',
+        event_data: {}
+    };
     
-    // 发送到后端
+    console.log('发送重置事件:', eventData);
     socket.emit('game_event', eventData);
 }
 
@@ -59,31 +71,49 @@ socket.on('game_event_result', (response) => {
     console.log('收到游戏事件结果:', response);
     
     if (response.ok) {
-        outputElement.textContent = `✓ ${response.msg}\n\n` +
-            `回显内容: ${response.echo}\n` +
-            `时间戳: ${response.timestamp}`;
-        inputField.value = '';
+        messageElement.textContent = response.msg;
+        
+        if (response.cards_state) {
+            gameState.cards = response.cards_state;
+            gameState.gameOver = response.game_over || false;
+            renderCards();
+        }
     } else {
-        outputElement.textContent = `✗ 错误: ${response.msg}`;
+        messageElement.textContent = `错误: ${response.msg}`;
     }
 });
 
-// 监听游戏状态更新
-socket.on('game_state_updated', (data) => {
-    console.log('游戏状态更新:', data);
-});
+// 渲染卡牌
+function renderCards() {
+    cardsContainer.innerHTML = '';
+    
+    gameState.cards.forEach((cardState, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        
+        if (cardState === 0) {
+            // 未翻开
+            card.classList.add('hidden');
+            card.textContent = '?';
+            card.onclick = () => flipCard(index);
+        } else if (cardState === 1) {
+            // 安全
+            card.classList.add('safe');
+            card.textContent = '✓';
+        } else if (cardState === 2) {
+            // 爆炸
+            card.classList.add('bomb');
+            card.textContent = '💥';
+        }
+        
+        cardsContainer.appendChild(card);
+    });
+}
 
-// 按钮点击事件
-sendBtn.addEventListener('click', sendMessage);
+// 重置按钮事件
+resetBtn.addEventListener('click', resetGame);
 
-// 回车发送
-inputField.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        sendMessage();
-    }
-});
-
-// 页面加载完成后自动聚焦输入框
+// 页面加载完成后初始化
 window.addEventListener('load', () => {
-    inputField.focus();
+    renderCards();
 });

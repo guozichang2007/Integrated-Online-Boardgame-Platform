@@ -79,11 +79,12 @@ class Room:
             print(f"房间 {self.room_id} 开始游戏: {self.selected_game}")
             result = self.game_instance.start()
             if result:
-                result = {'success':result,'url':self.game_info['url']}
+                self.game_started = True  # 设置游戏已开始标志
                 print(f"房间 {self.room_id} 游戏启动成功")
+                return {'success': True, 'url': self.game_info['url']}
             else:
                 print(f"房间 {self.room_id} 游戏启动失败")
-            return {'success':result,'url':self.game_info['url']}
+                return {'success': False, 'url': self.game_info['url']}
         elif self.game_started:
             print(f"开始游戏失败: 房间 {self.room_id} 游戏已开始")
         else:
