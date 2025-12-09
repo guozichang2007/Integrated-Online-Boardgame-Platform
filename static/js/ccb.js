@@ -27,7 +27,7 @@ let playerID = null;      // 当前玩家ID（显示在游戏中，暂未使用�
 
 socket.on('connect', () => {
     console.log('Socket.IO 连接成功！');
-    socket.emit('handle_token_reconnect', token);
+    socket.emit('token_reconnect', {token: token});
 });
 
 $(document).ready(() => {
