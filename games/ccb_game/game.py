@@ -668,6 +668,7 @@ class CCBGame(BaseGame):
                     self.cnt_explode(r, c)
 
     def update_board_information(self):
+        
         for sid in self.players:
             self.players[sid][8]=False
             for (i,j) in self.map :
