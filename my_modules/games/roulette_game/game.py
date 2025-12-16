@@ -1,4 +1,4 @@
-from games.base import BaseGame
+from my_modules.games.base import BaseGame
 import random
 
 class RouletteGame(BaseGame):

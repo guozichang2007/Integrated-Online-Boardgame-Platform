@@ -16,7 +16,6 @@ class GameRegistry:
         """
         # 获取games目录的绝对路径
         games_dir = os.path.dirname(__file__)
-        
         # 遍历games目录下的所有文件夹
         for game_folder in os.listdir(games_dir):
             game_path = os.path.join(games_dir, game_folder)
@@ -24,9 +23,10 @@ class GameRegistry:
             if os.path.isdir(game_path) and game_folder != '__pycache__':
                 try:
                     # 尝试导入游戏模块
-                    game_module_name = f'games.{game_folder}.game'
+                    game_module_name = f'my_modules.games.{game_folder}.game'
+
                     game_module = importlib.import_module(game_module_name)
-                    
+
                     # 检查游戏模块是否有register_game函数
                     if hasattr(game_module, 'register_game'):
                         # 调用注册函数获取游戏信息

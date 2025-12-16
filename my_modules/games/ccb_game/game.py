@@ -1,5 +1,5 @@
 spawn= [[12,11],[10,5],[10,21],[15,7]]
-from games.base import BaseGame
+from my_modules.games.base import BaseGame
 #[[0,0],[0,4],[4,0],[4,4]]
 import sys
 import time
