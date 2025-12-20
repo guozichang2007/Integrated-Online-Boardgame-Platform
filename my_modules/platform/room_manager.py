@@ -57,7 +57,7 @@ class Room:
             print(f"roommanager:房间 {self.room_id} 选择游戏: {game_id},info:{self.game_info}")
             for account, info in self.players.items():
                 if self.game_instance:
-                    self.game_instance.join(account, info['ID'])
+                    self.game_instance.join(account)
                     print(f"玩家 {account} 加入游戏 {game_id}")
             return True
         print(f"选择游戏失败: 房间 {self.room_id} ")
@@ -170,7 +170,7 @@ class RoomManager:
                 room.add_player(account, player_info)
                 # 如果游戏已选择，将玩家加入游戏实例
                 if room.game_instance:
-                    room.game_instance.join(account, player_info['ID'])
+                    room.game_instance.join(account)
                 print(f"玩家 {account} 加入房间 {room_id} 成功")
                 return room
             else:

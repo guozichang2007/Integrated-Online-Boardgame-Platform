@@ -25,15 +25,8 @@ const ANIMAL_DEFS = {
 $(document).ready(function() {
     // Login check
     const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    
-    if (!token || !userStr) {
-        window.location.href = '/';
-        return;
-    }
-    
-    const user = JSON.parse(userStr);
-    myAccount = user.account;
+
+
     
     // Connect (Reconnect to restore state)
     socket.emit('token_reconnect', {

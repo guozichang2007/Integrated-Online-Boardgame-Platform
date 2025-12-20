@@ -129,7 +129,6 @@ class RouletteGame(BaseGame):
     def get_state(self,account=0):
         return {
             'game_type': self.game_type,
-            'room_id': self.room_id,
             'players': self.players,
             'started': self.started,
             'host': self.host,

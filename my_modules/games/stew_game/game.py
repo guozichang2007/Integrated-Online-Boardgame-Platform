@@ -17,6 +17,9 @@ class StewGame(BaseGame):
         self.game_over = False
         self.target_score = 5
         self.last_stew_caller = None # To determine who starts next round
+
+        self.host = None
+        self.players = {}  # account -> 玩家信息
         
         # Card Definitions (ID, Name, Count, Value, Description)
         # 1: Chicken (5 pts)
@@ -37,7 +40,7 @@ class StewGame(BaseGame):
     def init_round(self):
         """Initialize a new round"""
         # Create Deck
-        print(f'[StewGame] Initializing new round in room {self.room_id}')
+        print(f'[StewGame] Initializing new round ')
         self.deck = []
         for cid, info in self.card_defs.items():
             for _ in range(info['count']):
@@ -76,7 +79,7 @@ class StewGame(BaseGame):
         self.phase = 'waiting_for_draw' # State where anyone can call stew or current player can draw
 
     def join(self, account):
-        print(f'[StewGame] Player {account} joining room {self.room_id}')
+        print(f'[StewGame] Player {account} joining')
         if account in self.players:
             return None
         
@@ -102,7 +105,7 @@ class StewGame(BaseGame):
         if len(self.players) >= 1: # Allow 1 player for testing, Rule says 2-4 players
             self.started = True
             self.init_round()
-            print(f'[StewGame] Game started in room {self.room_id}')
+            print(f'[StewGame] Game started ')
             return True
         return False
 

@@ -11,7 +11,6 @@ class BaseGame:
         Args:
             room_id: 房间ID
         """
-        self.room_id = room_id
         self.players = {}  # account -> 玩家信息
         self.started = False
         self.host = None
