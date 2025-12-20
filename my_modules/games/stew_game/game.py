@@ -6,7 +6,6 @@ class StewGame(BaseGame):
     Stew (炖菜) 游戏
     """
     def __init__(self, room_id):
-        super().__init__(room_id)
         self.game_type = 'stew'
         self.deck = []
         self.pot = []
@@ -38,6 +37,7 @@ class StewGame(BaseGame):
     def init_round(self):
         """Initialize a new round"""
         # Create Deck
+        print(f'[StewGame] Initializing new round in room {self.room_id}')
         self.deck = []
         for cid, info in self.card_defs.items():
             for _ in range(info['count']):
@@ -75,7 +75,8 @@ class StewGame(BaseGame):
             
         self.phase = 'waiting_for_draw' # State where anyone can call stew or current player can draw
 
-    def join(self, account, player_id):
+    def join(self, account):
+        print(f'[StewGame] Player {account} joining room {self.room_id}')
         if account in self.players:
             return None
         
@@ -84,7 +85,7 @@ class StewGame(BaseGame):
         
         order = len(self.players) + 1
         self.players[account] = {
-            'ID': player_id,
+
             'order': order,
             'account': account
         }
@@ -101,6 +102,7 @@ class StewGame(BaseGame):
         if len(self.players) >= 1: # Allow 1 player for testing, Rule says 2-4 players
             self.started = True
             self.init_round()
+            print(f'[StewGame] Game started in room {self.room_id}')
             return True
         return False
 

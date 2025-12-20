@@ -82,7 +82,7 @@ class MyGame(BaseGame):
             
         return {'ok': False, 'msg': '未知事件'}
         
-    def get_state(self):
+    def get_state(self,account):
         """返回完整游戏状态"""
         return {
             'players': self.players,
@@ -136,9 +136,30 @@ def register_game():
 
 在 `static/js/my_game.js` 中：
 
+**重要：前端必须在Socket连接时传递token，并在连接成功后发送`token_reconnect`以获取游戏状态。**
+
 ```javascript
-const socket = io();
-const token = localStorage.getItem('session_token');
+// 重要：获取token并在连接时传递
+var token = localStorage.getItem('session_token');
+const socket = io({
+    auth: {
+        token: token
+    }
+});
+
+// Socket连接成功后，发送token_reconnect以获取游戏状态
+socket.on('connect', () => {
+    console.log('Socket.IO 连接成功！');
+    socket.emit('token_reconnect', {token: token});
+});
+
+// 监听重连响应，接收游戏状态
+socket.on('reconnect_response', (data) => {
+    if (data.ok && data.game_state) {
+        // 使用返回的游戏状态初始化UI
+        updateUI(data.game_state);
+    }
+});
 
 // 1. 发送事件
 function doAction() {

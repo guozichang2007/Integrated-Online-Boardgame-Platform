@@ -20,7 +20,7 @@ class RouletteGame(BaseGame):
         self.revealed = [False] * 6  # 记录哪些卡已翻开
         self.game_over = False
     
-    def join(self, account, player_id):
+    def join(self, account):
         if account in self.players:
             return None
         
@@ -29,7 +29,6 @@ class RouletteGame(BaseGame):
         
         order = len(self.players) + 1
         self.players[account] = {
-            'ID': player_id,
             'order': order
         }
         return order
@@ -127,7 +126,7 @@ class RouletteGame(BaseGame):
                 state.append(0)  # 未翻开
         return state
     
-    def get_state(self):
+    def get_state(self,account=0):
         return {
             'game_type': self.game_type,
             'room_id': self.room_id,

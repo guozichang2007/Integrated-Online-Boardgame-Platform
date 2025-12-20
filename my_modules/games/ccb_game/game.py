@@ -190,7 +190,7 @@ class CCBGame(BaseGame):
                 'broadcast': True
             }
     
-    def get_state(self):
+    def get_state(self,account=0):
         """
         获取当前游戏状态，用于重连时刷新前端
         
