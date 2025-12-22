@@ -11,7 +11,8 @@ class StewGame(BaseGame):
         self.pot = []
         self.animals = []
         self.scores = {}
-        self.turn_player_index = 0
+        self.current_index = 0
+        self.current_player = None
         self.phase = 'waiting' # waiting, playing, resolved
         self.current_card = None # Card drawn by current player
         self.game_over = False
@@ -19,7 +20,7 @@ class StewGame(BaseGame):
         self.last_stew_caller = None # To determine who starts next round
 
         self.host = None
-        self.players = {}  # account -> 玩家信息
+        self.players = []  # account -> 玩家信息
         
         # Card Definitions (ID, Name, Count, Value, Description)
         # 1: Chicken (5 pts)
@@ -66,40 +67,42 @@ class StewGame(BaseGame):
         ]
         
         # Determine start player
-        if self.last_stew_caller:
-            # Find index of last caller
-            accounts = list(self.players.keys())
-            if self.last_stew_caller in accounts:
-                self.turn_player_index = accounts.index(self.last_stew_caller)
-            else:
-                self.turn_player_index = random.randint(0, len(self.players) - 1)
+        if self.last_stew_caller is not None and 0 <= self.last_stew_caller < len(self.players):
+            # last_stew_caller stores the index of last caller
+            self.current_index = self.last_stew_caller
         else:
-            self.turn_player_index = random.randint(0, len(self.players) - 1)
+            self.current_index = random.randint(0, len(self.players) - 1) if self.players else 0
+        
+        # Update current_player with the account
+        if self.players:
+            self.current_player = self.players[self.current_index]['account']
             
         self.phase = 'waiting_for_draw' # State where anyone can call stew or current player can draw
 
     def join(self, account):
         print(f'[StewGame] Player {account} joining')
-        if account in self.players:
-            return None
+        # Check if player already exists in the array
+        for player in self.players:
+            if player['account'] == account:
+                return None
         
         if self.host is None:
             self.host = account
         
         order = len(self.players) + 1
-        self.players[account] = {
-
-            'order': order,
-            'account': account
-        }
+        self.players.append({"account": account, "order": order})
         self.scores[account] = 0
+        print(f'[StewGame] players now: {self.players}')
         return order
     
     def leave(self, account):
-        if account in self.players:
-            del self.players[account]
-            if account == self.host and self.players:
-                self.host = next(iter(self.players.keys()))
+        # Find and remove player from array
+        for i, player in enumerate(self.players):
+            if player['account'] == account:
+                self.players.pop(i)
+                if account == self.host and self.players:
+                    self.host = self.players[0]['account']
+                break
 
     def start(self):
         if len(self.players) >= 1: # Allow 1 player for testing, Rule says 2-4 players
@@ -122,15 +125,14 @@ class StewGame(BaseGame):
             # Reset entire game (scores 0)
             if account != self.host:
                 return {'ok': False, 'msg': 'Only host can reset game'}
-            self.scores = {p: 0 for p in self.players}
+            # Reset scores for all players (using account as key)
+            self.scores = {player['account']: 0 for player in self.players}
             self.init_round()
             self.game_over = False
             return {'ok': True, 'broadcast': True}
         elif event_name == 'get_hand':
              # Allow frontend to fetch private hand state
-            players_list = list(self.players.keys())
-            current_player = players_list[self.turn_player_index]
-            if account == current_player and self.current_card:
+            if account == self.current_player and self.current_card:
                 return {'ok': True, 'my_card': self.current_card}
             return {'ok': True, 'my_card': None}
         
@@ -148,10 +150,8 @@ class StewGame(BaseGame):
         }
 
     def handle_draw(self, account):
-        players_list = list(self.players.keys())
-        current_player = players_list[self.turn_player_index]
-        
-        if account != current_player:
+        # current_player already set in init_round or updated after each action
+        if account != self.current_player:
             return {'ok': False, 'msg': 'Not your turn'}
         
         if self.phase != 'waiting_for_draw':
@@ -175,10 +175,7 @@ class StewGame(BaseGame):
         }
 
     def handle_action(self, account, data):
-        players_list = list(self.players.keys())
-        current_player = players_list[self.turn_player_index]
-        
-        if account != current_player:
+        if account != self.current_player:
             return {'ok': False, 'msg': 'Not your turn'}
         
         if self.phase != 'player_turn':
@@ -189,7 +186,7 @@ class StewGame(BaseGame):
         
         if action_type == 'pot':
             self.pot.append(self.current_card)
-            msg = f'{self.players[account]["ID"]} put a card in the pot.'
+            msg = f'{account} put a card in the pot.'
         elif action_type == 'feed':
             if animal_index is None or animal_index < 0 or animal_index >= len(self.animals):
                 return {'ok': False, 'msg': 'Invalid animal'}
@@ -197,13 +194,16 @@ class StewGame(BaseGame):
                 return {'ok': False, 'msg': 'Animal already fed'}
             
             self.animals[animal_index]['fed'] = True
-            msg = f'{self.players[account]["ID"]} fed the {self.animals[animal_index]["name"]}.'
+            msg = f'{account} fed the {self.animals[animal_index]["name"]}.'
         else:
             return {'ok': False, 'msg': 'Invalid action'}
         
         self.current_card = None
         self.phase = 'waiting_for_draw'
-        self.turn_player_index = (self.turn_player_index + 1) % len(self.players)
+        
+        # Move to next player
+        self.current_index = (self.current_index + 1) % len(self.players)
+        self.current_player = self.players[self.current_index]['account']
         
         # Check if deck is empty immediately after turn? 
         # No, check when next player tries to draw.
@@ -218,18 +218,25 @@ class StewGame(BaseGame):
         # Case 1: Called out of turn (waiting_for_draw phase)
         # Case 2: Called on turn (player_turn phase) -> Must play card first
         
-        players_list = list(self.players.keys())
-        current_player = players_list[self.turn_player_index]
+        # Find the index of the calling player
+        caller_index = None
+        for i, player in enumerate(self.players):
+            if player['account'] == account:
+                caller_index = i
+                break
+        
+        if caller_index is None:
+            return {'ok': False, 'msg': 'Player not in game'}
         
         if self.phase == 'waiting_for_draw':
             # Anyone can call
-            msg = f'{self.players[account]["ID"]} called STEW!'
-            self.resolve_stew(caller=account)
+            msg = f'{account} called STEW!'
+            self.resolve_stew(caller_index=caller_index)
             return {'ok': True, 'msg': msg, 'broadcast': True}
         
         elif self.phase == 'player_turn':
             # Only current player can call
-            if account != current_player:
+            if account != self.current_player:
                 return {'ok': False, 'msg': 'Cannot call Stew during another player\'s action phase'}
             
             # Must play card
@@ -250,8 +257,8 @@ class StewGame(BaseGame):
             else:
                  return {'ok': False, 'msg': 'Invalid action'}
             
-            msg = f'{self.players[account]["ID"]} called STEW!'
-            self.resolve_stew(caller=account)
+            msg = f'{account} called STEW!'
+            self.resolve_stew(caller_index=caller_index)
             return {'ok': True, 'msg': msg, 'broadcast': True}
         
         else:
@@ -268,9 +275,12 @@ class StewGame(BaseGame):
         
         losers = []
         if max_score > 0: # "If no player has any points, no one loses points"
-            losers = [p for p, s in self.scores.items() if s == max_score]
-            for p in losers:
-                self.scores[p] -= 1
+            losers = [account for account, s in self.scores.items() if s == max_score]
+            for account in losers:
+                self.scores[account] -= 1
+        
+        # Create score_changes dictionary using account as key
+        score_changes = {player['account']: (-1 if player['account'] in losers else 0) for player in self.players}
         
         self.last_result = {
             'success': False,
@@ -278,13 +288,15 @@ class StewGame(BaseGame):
             'pot_score': 0,
             'pot_cards': [],
             'caller': None,
-            'score_changes': {p: (-1 if p in losers else 0) for p in self.players}
+            'score_changes': score_changes
         }
         
         self.init_round()
 
-    def resolve_stew(self, caller):
-        self.last_stew_caller = caller
+    def resolve_stew(self, caller_index):
+        # caller_index is the index in self.players array
+        self.last_stew_caller = caller_index
+        caller_account = self.players[caller_index]['account']
         
         # 1. Reveal Pot
         pot_cards_details = [self.card_defs[cid] for cid in self.pot]
@@ -367,27 +379,27 @@ class StewGame(BaseGame):
         # 4. Determine Success
         success = score >= 12
         
-        # 5. Award Points
-        score_changes = {p: 0 for p in self.players}
+        # 5. Award Points - score_changes uses account as key for consistency with self.scores
+        score_changes = {player['account']: 0 for player in self.players}
         if success:
-            score_changes[caller] = 2
+            score_changes[caller_account] = 2
             result_msg = "STEW SUCCESS!"
         else:
             # Caller gets 0, others get 1
-            for p in self.players:
-                if p != caller:
-                    score_changes[p] = 1
+            for player in self.players:
+                if player['account'] != caller_account:
+                    score_changes[player['account']] = 1
             result_msg = "STEW FAILED!"
 
-        for p, change in score_changes.items():
-            self.scores[p] += change
+        for account, change in score_changes.items():
+            self.scores[account] += change
             
         # Check Winner
         winner = None
-        for p, s in self.scores.items():
+        for account, s in self.scores.items():
             if s >= self.target_score:
                 if winner is None or s > self.scores[winner]:
-                    winner = p
+                    winner = account
         
         if winner:
             self.game_over = True
@@ -407,10 +419,6 @@ class StewGame(BaseGame):
             self.init_round()
 
     def get_state(self, account=0):
-        players_list = list(self.players.keys())
-        current_player = None
-        if self.players:
-            current_player = players_list[self.turn_player_index]
         
         state = {
             'players': self.players,
@@ -419,8 +427,8 @@ class StewGame(BaseGame):
             'pot_count': len(self.pot),
             'deck_count': len(self.deck),
             'phase': self.phase,
-            'current_player_account': current_player,
-            'turn_player_index': self.turn_player_index,
+            'current_player_account': self.current_player,
+            'current_index': self.current_index,
             'game_over': self.game_over
         }
         
@@ -428,7 +436,7 @@ class StewGame(BaseGame):
             state['last_result'] = self.last_result
             
         # If it's the requesting player's turn and they have a card, show it
-        if account == current_player and self.current_card:
+        if account == self.current_player and self.current_card:
             state['my_card'] = self.current_card
             
         return state

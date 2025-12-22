@@ -24,7 +24,7 @@ const ANIMAL_DEFS = {
 
 $(document).ready(function() {
     // Login check
-    const token = localStorage.getItem('token');
+    var token = localStorage.getItem('session_token');
 
 
     
@@ -32,7 +32,7 @@ $(document).ready(function() {
     socket.emit('token_reconnect', {
         token: token
     });
-
+    console.log(token)
     // Events
     socket.on('reconnect_response', function(data) {
         console.log('Reconnect Response:', data);
@@ -73,7 +73,7 @@ $(document).ready(function() {
 
     // Bind Controls
     $('#btn-draw').click(function() {
-        socket.emit('game_event', { event_name: 'draw' });
+        socket.emit('game_event', { event_name: 'draw' ,token: token});
     });
 
     $('#btn-call-stew').click(function() {
@@ -89,7 +89,7 @@ $(document).ready(function() {
         } else {
             // Direct call
             if (confirm("确定要现在喊炖菜吗？")) {
-                socket.emit('game_event', { event_name: 'call_stew' });
+                socket.emit('game_event', { event_name: 'call_stew',token: token });
             }
         }
     });
@@ -100,19 +100,17 @@ $(document).ready(function() {
 
     $('#btn-reset').click(function() {
         if (confirm("确定要重置游戏吗？")) {
-            socket.emit('game_event', { event_name: 'reset_game' });
+            socket.emit('game_event', { event_name: 'reset_game' ,token: token});
         }
     });
 
-    // Initial render
-    renderAnimals();
 });
 
 function checkAndRequestHand() {
     if (!gameState) return;
     if (gameState.current_player_account === myAccount) {
         if (!gameState.my_card && gameState.phase === 'player_turn') {
-             socket.emit('game_event', { event_name: 'get_hand' });
+             socket.emit('game_event', { event_name: 'get_hand' ,token: token});
         }
     }
 }
@@ -127,7 +125,8 @@ function handlePlayCard(actionType, animalIndex = null) {
     socket.emit('game_event', {
         event_name: eventName,
         action_type: actionType,
-        animal_index: animalIndex
+        animal_index: animalIndex,
+        token: token
     });
     
     isCallingStewMode = false;
@@ -138,7 +137,9 @@ function renderGame() {
     if (!gameState) return;
 
     // Update Status Msg
-    const currentPlayerName = gameState.players[gameState.current_player_account]?.ID || '未知';
+    // Find current player in the array
+    const currentPlayerObj = gameState.players.find(p => p.account === gameState.current_player_account);
+    const currentPlayerName = currentPlayerObj?.account || '未知';
     let statusText = '';
     
     if (gameState.game_over) {
@@ -193,13 +194,13 @@ function renderGame() {
 
     // Update Scoreboard
     $('#scores-list').empty();
-    Object.keys(gameState.players).forEach(account => {
-        const p = gameState.players[account];
+    gameState.players.forEach(player => {
+        const account = player.account;
         const score = gameState.scores[account] || 0;
         const isActive = (account === gameState.current_player_account);
         const row = $('<div>').addClass('player-score')
             .toggleClass('active', isActive)
-            .html(`<span>${p.ID}</span> <span>${score} 分</span>`);
+            .html(`<span>${account}</span> <span>${score} 分</span>`);
         $('#scores-list').append(row);
     });
 
@@ -212,7 +213,8 @@ function renderGame() {
     }
 
     // Update Host Controls
-    if (myAccount === Object.keys(gameState.players)[0]) { // Simple host check
+    // Check if current user is the first player (host)
+    if (gameState.players.length > 0 && myAccount === gameState.players[0].account) {
         $('#btn-reset').show();
     }
 
@@ -307,14 +309,18 @@ function showResultModal(result) {
     
     let scoreHtml = '<h4>分数变化:</h4><ul>';
     Object.keys(result.score_changes).forEach(acc => {
-         const name = gameState.players[acc]?.ID || acc;
+         // Find player in array by account
+         const playerObj = gameState.players.find(p => p.account === acc);
+         const name = playerObj?.account || acc;
          const change = result.score_changes[acc];
          scoreHtml += `<li>${name}: ${change > 0 ? '+' : ''}${change}</li>`;
     });
     scoreHtml += '</ul>';
     
     if (result.winner) {
-        const winName = gameState.players[result.winner]?.ID || result.winner;
+        // Find winner player in array
+        const winnerObj = gameState.players.find(p => p.account === result.winner);
+        const winName = winnerObj?.account || result.winner;
         scoreHtml += `<h2 style="color:#ffd700; margin-top:20px;">🏆 获胜者: ${winName} 🏆</h2>`;
     }
     
